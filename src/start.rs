@@ -1,7 +1,7 @@
 use core::arch::asm;
 use core::panic::PanicInfo;
 
-use crate::env;
+use crate::{env, ministd};
 
 /// This function is called on panic.
 #[panic_handler]
@@ -44,7 +44,7 @@ unsafe extern "C" fn _start() -> ! {
 unsafe fn _start_main(rsp: *const u8) -> ! {
     let args = env::args(rsp);
 
-    crate::main(args);
+    let _ = crate::main(args);
 
-    crate::syscalls::exit(0);
+    ministd::process::exit(0);
 }
