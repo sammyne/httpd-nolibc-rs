@@ -8,16 +8,7 @@ mod ministd;
 mod start;
 mod syscalls;
 
-#[no_mangle]
-unsafe fn _start_main(rsp: *const u8) -> ! {
-    let args = env::args(rsp);
-
-    main(args);
-
-    syscalls::exit(0);
-}
-
-#[no_mangle]
+//#[no_mangle]
 unsafe fn main(args: Args<'_>) {
     for v in args {
         syscalls::write(syscalls::FILENO_STDOUT, v.as_ptr(), v.len());
