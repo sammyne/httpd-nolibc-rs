@@ -6,3 +6,7 @@ pub unsafe fn strlen(mut s: *const u8) -> usize {
     }
     count
 }
+
+mod socket;
+
+pub use socket::*;
