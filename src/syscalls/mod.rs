@@ -10,16 +10,14 @@ pub const FILENO_STDOUT: u32 = 1;
 /*                           ^^^         */
 /* stack grows from a high address to a low address */
 
-pub unsafe fn accept(sockfd: i32, addr: &SockaddrIn) -> i32 {
-    const ADDR_LEN: usize = mem::size_of::<SockaddrIn>();
-
+pub unsafe fn accept(sockfd: i32, addr: *const SockaddrIn, addr_len: i32) -> i32 {
     let out: i32;
     asm!(
         "syscall",
         in("rax") 43,
         in("rdi") sockfd,
         in("rsi") addr,
-        in("rdx") ADDR_LEN,
+        in("rdx") addr_len,
         lateout("rax") out,
         // Linux syscalls don't touch the stack at all, so
         // we don't care about its alignment
@@ -133,8 +131,9 @@ pub unsafe fn setsockopt(socket: i32, level: i32, option_name: i32, option_value
         inout("rax") 54 => out,
         in("rdi") socket,
         in("rsi") level,
-        in("rdx") option_value.as_ptr(),
-        in("r10") option_value.len() as i32,
+        in("rdx") option_name,
+        in("r10") option_value.as_ptr(),
+        in("r8") option_value.len() as i32,
         // Linux syscalls don't touch the stack at all, so
         // we don't care about its alignment
         options(nostack)
