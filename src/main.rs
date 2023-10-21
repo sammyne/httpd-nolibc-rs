@@ -1,22 +1,25 @@
 #![no_std] // don't link the Rust standard library
 #![no_main] // disable all Rust-level entry points
 
-use core::panic::PanicInfo;
+use ministd::env::{self, Args};
 
-/// This function is called on panic.
-#[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
-    loop {}
-}
+mod ministd;
+mod start;
+mod syscalls;
 
-#[no_mangle] // don't mangle the name of this function
-pub unsafe fn _start() -> ! {
-    // this function is the entry point, since the linker looks for a function
-    // named `_start` by default
+#[no_mangle]
+unsafe fn _start_main(rsp: *const u8) -> ! {
+    let args = env::args(rsp);
+
+    main(args);
+
     syscalls::exit(0);
 }
 
 #[no_mangle]
-pub fn not_main() {}
-
-mod syscalls;
+unsafe fn main(args: Args<'_>) {
+    for v in args {
+        let buf = v.to_bytes();
+        syscalls::write(syscalls::FILENO_STDOUT, buf.as_ptr(), buf.len());
+    }
+}
