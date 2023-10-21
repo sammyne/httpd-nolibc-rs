@@ -3,6 +3,7 @@
 
 use ministd::env::{self, Args};
 
+mod c;
 mod ministd;
 mod start;
 mod syscalls;
@@ -19,7 +20,6 @@ unsafe fn _start_main(rsp: *const u8) -> ! {
 #[no_mangle]
 unsafe fn main(args: Args<'_>) {
     for v in args {
-        let buf = v.to_bytes();
-        syscalls::write(syscalls::FILENO_STDOUT, buf.as_ptr(), buf.len());
+        syscalls::write(syscalls::FILENO_STDOUT, v.as_ptr(), v.len());
     }
 }

@@ -1,7 +1,4 @@
-use core::ffi::CStr;
 use core::slice::{self, Iter};
-
-use crate::syscalls;
 
 pub struct Args<'a> {
     iter: Iter<'a, *const u8>,
@@ -15,16 +12,20 @@ impl<'a> Args<'a> {
 }
 
 impl<'a> Iterator for Args<'a> {
-    type Item = &'a CStr;
+    /// 为何不用 CStr：CStr 计算长度过程因未知原因失败
+    type Item = &'a [u8];
 
     fn next(&mut self) -> Option<Self::Item> {
-        unsafe { self.iter.next().map(|&v| CStr::from_ptr(v as *const i8)) }
+        unsafe {
+            self.iter
+                .next()
+                .map(|&v| slice::from_raw_parts(v, crate::c::strlen(v)))
+        }
     }
 }
 
 pub unsafe fn args<'a>(v: *const u8) -> Args<'a> {
     let argc = *(v as *const u64);
-    //syscalls::exit(argc as _);
 
     let argv = v.add(8) as *const *const u8;
 
