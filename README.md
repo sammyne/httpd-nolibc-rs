@@ -1,5 +1,11 @@
 # httpd-nolibc-rs
 
+## 快速开始
+
+```bash
+cargo run -- 8080 static/index.html
+```
+
 ## 参考文献
 - [A no_std Rust binary](https://fasterthanli.me/series/making-our-own-executable-packer/part-12)
 - [Francesco149/nolibc-httpd](https://github.com/Francesco149/nolibc-httpd)
