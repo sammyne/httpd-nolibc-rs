@@ -5,6 +5,11 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+# 更改输出的可执行文件的名称
+[[bin]]
+name = "mini-httpd"
+path = "src/main.rs"
+
 [dependencies]
 
 [profile.dev]
