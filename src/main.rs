@@ -26,7 +26,7 @@ fn main(args: Args<'_>) {
 
     let addr = SockaddrIn {
         sin_family: AF_INET,
-        sin_port: port,
+        sin_port: port.to_be(),
         sin_addr: 0,
         ..Default::default()
     };
