@@ -4,6 +4,7 @@
 use core::ptr;
 
 use ministd::env::{self, Args};
+use ministd::net::SocketAddrV4;
 use ministd::{prelude::*, process};
 
 mod c;
@@ -22,12 +23,12 @@ const SHUT_RDWR: i32 = 2;
 const O_RDONLY: i32 = 0;
 
 fn main(args: Args<'_>) {
-    let (port, filename) = must_parse_args(args);
+    let (addr, filename) = must_parse_args(args);
 
     let addr = SockaddrIn {
         sin_family: AF_INET,
-        sin_port: port.to_be(),
-        sin_addr: 0,
+        sin_port: addr.port.to_be(),
+        sin_addr: addr.ip.0.to_be(),
         ..Default::default()
     };
 
@@ -51,11 +52,6 @@ fn main(args: Args<'_>) {
             return;
         }
     }
-
-    //for v in args {
-    //    let s = str::from_utf8_unchecked(v);
-    //    println(s);
-    //}
 }
 
 fn die(s: &str) -> ! {
@@ -123,15 +119,11 @@ unsafe fn http_serve(fd: i32, filename: &str) -> Result<(), i32> {
     Ok(())
 }
 
-fn must_parse_args(args: Args<'_>) -> (u16, &str) {
+fn must_parse_args(args: Args<'_>) -> (SocketAddrV4, &str) {
     let mut args = args.map(|v| unsafe { ministd::str::from_utf8_unchecked(v) });
 
-    match (
-        args.next(),
-        args.next().map(|v| v.parse::<u16>()),
-        args.next(),
-    ) {
-        (Some(_), Some(Ok(port)), Some(filename)) => (port, filename),
+    match (args.next(), args.next().map(|v| v.parse()), args.next()) {
+        (Some(_), Some(Ok(addr)), Some(filename)) => (addr, filename),
         (Some(argv0), _, _) => {
             usage(argv0);
             process::exit(1);
@@ -143,7 +135,7 @@ fn must_parse_args(args: Args<'_>) -> (u16, &str) {
 fn usage(argv0: &str) {
     print("usage: ");
     print(argv0);
-    println(" port file");
+    println(" [ip:]port file");
 }
 
 // 待整理
