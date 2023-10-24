@@ -27,14 +27,17 @@ fn main(args: Args<'_>) {
             }
         };
 
-        let pid = unsafe { syscalls::fork() };
-        if pid < 0 {
-            perror("fork");
-            continue;
-        } else if pid == 0 {
-            // todo: 处理错误码
-            unsafe { http_serve(conn.as_raw_fd(), filename).expect("serve") };
-            return;
+        match process::fork() {
+            Err(_) => {
+                perror("fork");
+                continue;
+            }
+            Ok(0) => {
+                // todo: 处理错误码
+                unsafe { http_serve(conn.as_raw_fd(), filename).expect("serve") };
+                return;
+            }
+            Ok(_) => {}
         }
     }
 }
