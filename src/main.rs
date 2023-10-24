@@ -4,7 +4,7 @@
 use core::ptr;
 
 use ministd::env::{self, Args};
-use ministd::net::SocketAddrV4;
+use ministd::net::{SocketAddrV4, TcpListener};
 use ministd::{prelude::*, process};
 
 mod c;
@@ -12,31 +12,16 @@ mod ministd;
 mod start;
 mod syscalls;
 
-use c::SockaddrIn;
-
-const AF_INET: u16 = 2;
-const SOCK_STREAM: i32 = 1;
-const IPPROTO_TCP: i32 = 6;
-const SO_REUSEADDR: i32 = 2;
-const SOL_SOCKET: i32 = 1;
 const SHUT_RDWR: i32 = 2;
 const O_RDONLY: i32 = 0;
 
 fn main(args: Args<'_>) {
     let (addr, filename) = must_parse_args(args);
 
-    let addr = SockaddrIn {
-        sin_family: AF_INET,
-        sin_port: addr.port.to_be(),
-        sin_addr: addr.ip.0.to_be(),
-        ..Default::default()
-    };
+    let listener = TcpListener::bind(addr).expect("tcp bind");
 
-    let yes: _ = 1i32.to_ne_bytes();
-
-    let sock = unsafe { must_tcp_listen(&addr, &yes) };
     loop {
-        let conn = unsafe { syscalls::accept(sock, ptr::null(), 0) };
+        let conn = unsafe { syscalls::accept(listener.as_raw_fd(), ptr::null(), 0) };
         if conn < 0 {
             perror("accept");
             continue;
@@ -52,12 +37,6 @@ fn main(args: Args<'_>) {
             return;
         }
     }
-}
-
-fn die(s: &str) -> ! {
-    print("FATAL: ");
-    println(s);
-    process::exit(1);
 }
 
 unsafe fn http_consume(fd: i32) {
@@ -140,31 +119,6 @@ fn usage(argv0: &str) {
     print("usage: ");
     print(argv0);
     println(" [ip:]port file");
-}
-
-// 待整理
-unsafe fn must_tcp_listen(addr: &SockaddrIn, opt: &[u8]) -> i32 {
-    let sock = syscalls::socket(AF_INET as i32, SOCK_STREAM, IPPROTO_TCP);
-    if sock < 0 {
-        die("socket");
-    }
-
-    let err = syscalls::setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, opt);
-    if err != 0 {
-        die("setsockopt");
-    }
-
-    let err = syscalls::bind(sock, addr);
-    if err != 0 {
-        die("bind");
-    }
-
-    let err = syscalls::listen(sock, 10);
-    if err != 0 {
-        die("listen");
-    }
-
-    sock
 }
 
 fn perror(s: &str) {
