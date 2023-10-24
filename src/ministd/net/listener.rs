@@ -1,10 +1,11 @@
+use core::ptr;
+
 use crate::c::SockaddrIn;
-use crate::ministd::net::SocketAddrV4;
+use crate::ministd::net::{SocketAddrV4, TcpStream};
 use crate::syscalls;
 
 const AF_INET: u16 = 2;
 const IPPROTO_TCP: i32 = 6;
-const SHUT_RDWR: i32 = 2;
 const SOCK_STREAM: i32 = 1;
 const SOL_SOCKET: i32 = 1;
 const SO_REUSEADDR: i32 = 2;
@@ -12,8 +13,17 @@ const SO_REUSEADDR: i32 = 2;
 pub struct TcpListener(i32);
 
 impl TcpListener {
-    pub fn as_raw_fd(&self) -> i32 {
-        self.0
+    //pub fn as_raw_fd(&self) -> i32 {
+    //    self.0
+    //}
+
+    pub fn accept(&self) -> Result<TcpStream, &'static str> {
+        let conn = unsafe { syscalls::accept(self.0, ptr::null(), 0) };
+        if conn < 0 {
+            return Err("fail");
+        }
+
+        Ok(TcpStream(conn))
     }
 
     pub fn bind(addr: SocketAddrV4) -> Result<Self, &'static str> {
