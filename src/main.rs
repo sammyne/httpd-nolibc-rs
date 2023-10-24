@@ -2,7 +2,7 @@
 #![no_main] // disable all Rust-level entry points
 
 use ministd::env::{self, Args};
-use ministd::net::{SocketAddrV4, TcpListener};
+use ministd::net::{SocketAddrV4, TcpListener, TcpStream};
 use ministd::{prelude::*, process};
 
 mod c;
@@ -10,7 +10,6 @@ mod ministd;
 mod start;
 mod syscalls;
 
-const SHUT_RDWR: i32 = 2;
 const O_RDONLY: i32 = 0;
 
 fn main(args: Args<'_>) {
@@ -34,7 +33,7 @@ fn main(args: Args<'_>) {
             }
             Ok(0) => {
                 // todo: 处理错误码
-                unsafe { http_serve(conn.as_raw_fd(), filename).expect("serve") };
+                unsafe { http_serve(conn, filename).expect("serve") };
                 return;
             }
             Ok(_) => {}
@@ -61,22 +60,20 @@ unsafe fn http_consume(fd: i32) {
     }
 }
 
-unsafe fn http_drop(conn: i32) {
-    let _ = syscalls::shutdown(conn, SHUT_RDWR);
-    let _ = syscalls::close(conn);
-}
-
-unsafe fn http_serve(fd: i32, filename: &str) -> Result<(), i32> {
-    http_consume(fd);
+unsafe fn http_serve(conn: TcpStream, filename: &str) -> Result<(), i32> {
+    http_consume(conn.as_raw_fd());
 
     // 假设 filename 源自 argv[i]，因此底层是合法的 C 字符串
     let f = syscalls::open(filename.as_ptr() as *const i8, O_RDONLY);
     if f < 0 {
         perror("open");
-        writeln(fd, concat!("HTTP/1.1 404 NOT FOUND\r\n\r\n404 NOT FOUND"));
+        writeln(
+            conn.as_raw_fd(),
+            concat!("HTTP/1.1 404 NOT FOUND\r\n\r\n404 NOT FOUND"),
+        );
         return Err(1);
     }
-    writeln(fd, "HTTP/1.1 200 OK\r\n\r\n");
+    writeln(conn.as_raw_fd(), "HTTP/1.1 200 OK\r\n\r\n");
 
     let mut buf = [0u8; 8192];
     loop {
@@ -89,14 +86,14 @@ unsafe fn http_serve(fd: i32, filename: &str) -> Result<(), i32> {
             n => n as usize,
         };
 
-        let n = write(fd, &buf[..n]);
+        let n = write(conn.as_raw_fd(), &buf[..n]);
         if n < 0 {
             perror("write");
             return Err(1);
         }
     }
 
-    http_drop(fd);
+    conn.shutdown(ministd::net::Shutdown::Both)?;
 
     Ok(())
 }
