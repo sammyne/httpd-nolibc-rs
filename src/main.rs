@@ -1,8 +1,6 @@
 #![no_std] // don't link the Rust standard library
 #![no_main] // disable all Rust-level entry points
 
-use core::ptr;
-
 use ministd::env::{self, Args};
 use ministd::net::{SocketAddrV4, TcpListener};
 use ministd::{prelude::*, process};
@@ -21,11 +19,13 @@ fn main(args: Args<'_>) {
     let listener = TcpListener::bind(addr).expect("tcp bind");
 
     loop {
-        let conn = unsafe { syscalls::accept(listener.as_raw_fd(), ptr::null(), 0) };
-        if conn < 0 {
-            perror("accept");
-            continue;
-        }
+        let conn = match listener.accept() {
+            Ok(v) => v,
+            Err(err) => {
+                println!("[ERROR] accept ", err);
+                continue;
+            }
+        };
 
         let pid = unsafe { syscalls::fork() };
         if pid < 0 {
@@ -33,7 +33,7 @@ fn main(args: Args<'_>) {
             continue;
         } else if pid == 0 {
             // todo: 处理错误码
-            unsafe { http_serve(conn, filename).expect("serve") };
+            unsafe { http_serve(conn.as_raw_fd(), filename).expect("serve") };
             return;
         }
     }
