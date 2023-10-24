@@ -124,6 +124,10 @@ fn must_parse_args(args: Args<'_>) -> (SocketAddrV4, &str) {
 
     match (args.next(), args.next().map(|v| v.parse()), args.next()) {
         (Some(_), Some(Ok(addr)), Some(filename)) => (addr, filename),
+        (Some(_), Some(Err(err)), _) => {
+            println!("failed to parse addr: ", err);
+            process::exit(1);
+        }
         (Some(argv0), _, _) => {
             usage(argv0);
             process::exit(1);
