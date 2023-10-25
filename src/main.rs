@@ -41,17 +41,18 @@ fn main(args: Args<'_>) {
     }
 }
 
-unsafe fn http_consume(fd: i32) {
+fn http_consume(conn: &TcpStream) {
     let mut buf = [0u8; 8192];
     loop {
-        let n = syscalls::read(fd, buf.as_mut_ptr(), buf.len());
-        if n < 0 {
-            perror("read");
-            return;
-        }
-        let n = n as usize;
+        let n = match conn.read(&mut buf) {
+            Ok(n) => n,
+            Err(_) => {
+                perror("read");
+                return;
+            }
+        };
 
-        let s = ministd::str::from_utf8_unchecked(&buf[..n]);
+        let s = unsafe { ministd::str::from_utf8_unchecked(&buf[..n]) };
         print(s);
 
         if n < 3 || s.ends_with("\n\r\n") {
@@ -61,19 +62,24 @@ unsafe fn http_consume(fd: i32) {
 }
 
 unsafe fn http_serve(conn: TcpStream, filename: &str) -> Result<(), i32> {
-    http_consume(conn.as_raw_fd());
+    http_consume(&conn);
 
     // 假设 filename 源自 argv[i]，因此底层是合法的 C 字符串
     let f = syscalls::open(filename.as_ptr() as *const i8, O_RDONLY);
     if f < 0 {
         perror("open");
-        writeln(
-            conn.as_raw_fd(),
-            concat!("HTTP/1.1 404 NOT FOUND\r\n\r\n404 NOT FOUND"),
-        );
+        conn.write(b"HTTP/1.1 404 NOT FOUND\r\n\r\n404 NOT FOUND\n")
+            .map_err(|err| {
+                perror("write 'NOT FOUND' http header");
+                err
+            })?;
+
         return Err(1);
     }
-    writeln(conn.as_raw_fd(), "HTTP/1.1 200 OK\r\n\r\n");
+    conn.write(b"HTTP/1.1 200 OK\r\n\r\n").map_err(|err| {
+        perror("write http header");
+        err
+    })?;
 
     let mut buf = [0u8; 8192];
     loop {
@@ -86,11 +92,10 @@ unsafe fn http_serve(conn: TcpStream, filename: &str) -> Result<(), i32> {
             n => n as usize,
         };
 
-        let n = write(conn.as_raw_fd(), &buf[..n]);
-        if n < 0 {
+        let _ = conn.write(&buf[..n]).map_err(|err| {
             perror("write");
-            return Err(1);
-        }
+            err
+        })?;
     }
 
     conn.shutdown(ministd::net::Shutdown::Both)?;
