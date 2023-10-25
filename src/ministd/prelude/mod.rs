@@ -12,6 +12,7 @@ pub fn println(s: &str) {
     print("\n");
 }
 
+/*
 pub fn write<T>(fd: i32, data: T) -> isize
 where
     T: AsRef<[u8]>,
@@ -27,3 +28,4 @@ where
     let _ = write(fd, data);
     let _ = write(fd, &[b'\n']);
 }
+*/
