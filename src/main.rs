@@ -32,7 +32,7 @@ fn main(args: Args<'_>) {
             }
             Ok(0) => {
                 // todo: 处理错误码
-                unsafe { http_serve(conn, filename).expect("serve") };
+                http_serve(conn, filename).expect("serve");
                 return;
             }
             Ok(_) => {}
@@ -60,7 +60,7 @@ fn http_consume(conn: &TcpStream) {
     }
 }
 
-unsafe fn http_serve(conn: TcpStream, filename: &str) -> Result<(), i32> {
+fn http_serve(conn: TcpStream, filename: &str) -> Result<(), i32> {
     http_consume(&conn);
 
     // 假设 filename 源自 argv[i]，因此底层是合法的 C 字符串
