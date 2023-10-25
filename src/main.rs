@@ -127,5 +127,5 @@ fn trace_err(ctx: &str, err: i32) -> i32 {
 fn usage(argv0: &str) {
     print("usage: ");
     print(argv0);
-    println(" [ip:]port file");
+    println(" [ip]:port file");
 }
