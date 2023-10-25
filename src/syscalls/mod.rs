@@ -1,3 +1,8 @@
+//! 此模块实现项目依赖的系统调用接口。
+//! linux 系统下的函数调用参数传递顺序约定为：rdi, rsi, rdx, rcx, r8, r9。例如，f(a, b)，则 a、b 依序放入 rdi 和 rsi 寄存器。
+//! linux 系统下的系统调用参数传递顺序约定为：rdi, rsi, rdx, r10, r8, r9。例如，syscall(a, b)，则 a、b 依序放入 rdi 和 rsi
+//! 寄存器。
+//!
 use core::mem;
 use core::{arch::asm, ffi::c_char};
 
