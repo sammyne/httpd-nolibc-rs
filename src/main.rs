@@ -69,18 +69,13 @@ unsafe fn http_serve(conn: TcpStream, filename: &str) -> Result<(), i32> {
         Err(_) => {
             perror("open");
             conn.write(b"HTTP/1.1 404 NOT FOUND\r\n\r\n404 NOT FOUND\n")
-                .map_err(|err| {
-                    perror("write 'NOT FOUND' http header");
-                    err
-                })?;
+                .map_err(|err| trace_err("write 'NOT FOUND' http header", err))?;
 
             return Err(1);
         }
     };
-    conn.write(b"HTTP/1.1 200 OK\r\n\r\n").map_err(|err| {
-        perror("write http header");
-        err
-    })?;
+    conn.write(b"HTTP/1.1 200 OK\r\n\r\n")
+        .map_err(|err| trace_err("write ok http header", err))?;
 
     let mut buf = [0u8; 8192];
     loop {
@@ -93,10 +88,9 @@ unsafe fn http_serve(conn: TcpStream, filename: &str) -> Result<(), i32> {
             }
         };
 
-        let _ = conn.write(&buf[..n]).map_err(|err| {
-            perror("write");
-            err
-        })?;
+        let _ = conn
+            .write(&buf[..n])
+            .map_err(|err| trace_err("write", err))?;
     }
 
     conn.shutdown(ministd::net::Shutdown::Both)?;
@@ -121,13 +115,17 @@ fn must_parse_args(args: Args<'_>) -> (SocketAddrV4, &str) {
     }
 }
 
+fn perror(s: &str) {
+    println!("[ERROR] ", s);
+}
+
+fn trace_err(ctx: &str, err: i32) -> i32 {
+    perror(ctx);
+    err
+}
+
 fn usage(argv0: &str) {
     print("usage: ");
     print(argv0);
     println(" [ip:]port file");
-}
-
-fn perror(s: &str) {
-    print("ERROR: ");
-    println(s);
 }
